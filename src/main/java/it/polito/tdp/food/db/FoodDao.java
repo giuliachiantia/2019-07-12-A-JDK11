@@ -12,6 +12,37 @@ import it.polito.tdp.food.model.Food;
 import it.polito.tdp.food.model.Portion;
 
 public class FoodDao {
+	public List<Food> getFoodsByPortions(int portions) {
+		String sql = "SELECT food.food_code, food.display_name, COUNT(DISTINCT portion.portion_id) AS CNT " + 
+				"FROM food, `portion` " + 
+				"WHERE food.food_code=portion.food_code " + 
+				"GROUP BY food.food_code " + 
+				"HAVING CNT=? " +
+				"ORDER BY food.display_name ASC" ;
+		
+		List<Food> result = new ArrayList<>();
+		
+		try {
+			Connection conn = DBConnect.getConnection() ;
+			PreparedStatement st = conn.prepareStatement(sql) ;
+			st.setInt(1, portions);
+			ResultSet res = st.executeQuery() ;
+			
+			while(res.next()) {
+				result.add( new Food(
+						res.getInt("food_code"),
+						res.getString("display_name")) ) ;
+			}
+			
+			conn.close();
+			return result ;
+			
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null ;
+		}
+	}
 	public List<Food> listAllFoods(){
 		String sql = "SELECT * FROM food" ;
 		try {
@@ -108,5 +139,41 @@ public class FoodDao {
 			return null ;
 		}
 
+	}
+	public Double calorieCongiunte(Food f1, Food f2) {
+		String sql = "SELECT fc1.food_code, fc2.food_code,  " + 
+				"		 AVG(condiment.condiment_calories) AS cal " + 
+				"FROM food_condiment AS fc1, food_condiment AS fc2, condiment " + 
+				"WHERE fc1.condiment_code=fc2.condiment_code " + 
+				"AND condiment.condiment_code=fc1.condiment_code " + 
+				"AND fc1.id<>fc2.id " + 
+				"AND fc1.food_code=? " + 
+				"AND fc2.food_code=? " + 
+				"GROUP BY fc1.food_code, fc2.food_code" ;
+		
+		try {
+			Connection conn = DBConnect.getConnection() ;
+
+			PreparedStatement st = conn.prepareStatement(sql) ;
+			
+			st.setInt(1, f1.getFood_code());
+			st.setInt(2, f2.getFood_code());
+			
+			ResultSet res = st.executeQuery() ;
+			
+			Double calories = null ;
+			if(res.first()) {
+				calories = res.getDouble("cal") ;
+			}
+			// altimenti rimane null
+			
+			conn.close();
+			return calories ;
+			
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null ;
+		}
 	}
 }
